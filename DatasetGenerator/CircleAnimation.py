@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
+import cv2
 
 from scipy.signal import convolve2d
 from motionFilter import motion_filter
@@ -39,13 +40,17 @@ class CircleAnimation():
         posy = self.positions[1]
 
         # Add a progress bar
-        pbar = tqdm(desc='Generating ' + self.trajectory + ' animation...', total=self.frames)
+        pbar = tqdm(desc='Generating ' + self.trajectory + ' animation', total=self.frames)
 
         for i in range(0, self.frames):
             x = posx[i]
             y = posy[i]
+            frame = np.zeros((self.height, self.width))
             # Animate position
-            self.animation[:, :, i] = self.generate_circle(x, y)
+            # Draws a circle in animation, with the given coordinates and radius,
+            # gives the color in order (b,g,r) and the thickness of the border   
+            cv2.circle(frame, (x, y), self.radius, (255,255,255), -1)
+            self.animation[:, :, i] = frame
 
             # Get the movement angle
             angle = np.arctan(y / x) * 180/np.pi
@@ -59,56 +64,6 @@ class CircleAnimation():
 
         # Close progress bar
         pbar.close()
-
-    def generate_circle(self, x ,y):
-
-        # Clears previous drawing
-        matrix = np.zeros((self.offset_height, self.offset_width))
-        # Draws a circle
-        self.draw_circle(y, x, self.radius, matrix)
-        # Fills the drawn circle
-        self.fill_circle(y, x, matrix)
-        # Crop the image to the needed dimensions
-        return matrix[0:self.height, 0:self.width]
-
-
-    def draw_circle(self, xc, yc, radius, matrix):
-        d = 3 - (2 * radius)
-        x = 0
-        y = radius
-        matrix[xc+x, yc+y] = 255
-        matrix[xc-x, yc+y] = 255
-        matrix[xc+x, yc-y] = 255
-        matrix[xc-x, yc-y] = 255
-        matrix[xc+y, yc+x] = 255
-        matrix[xc-y, yc+x] = 255
-        matrix[xc+y, yc-x] = 255
-        matrix[xc-y, yc-x] = 255
-        while x <= y:
-            x+=1
-            if d<0:
-                d = d + (4*x) + 6
-            else:
-                d = d + 4 * (x - y) + 10
-                y-=1
-            matrix[xc+x, yc+y] = 255
-            matrix[xc-x, yc+y] = 255
-            matrix[xc+x, yc-y] = 255
-            matrix[xc-x, yc-y] = 255
-            matrix[xc+y, yc+x] = 255
-            matrix[xc-y, yc+x] = 255
-            matrix[xc+y, yc-x] = 255
-            matrix[xc-y, yc-x] = 255
-
-    def fill_circle(self, xc, yc, matrix):
-        # Fills the circle
-        if self.radius > 1:
-
-            for i in range(1, self.radius): 
-                self.draw_circle(xc, yc, i, matrix)
-
-        matrix[xc, yc] = 255
-
     
     def generate_trajectory(self):
 
