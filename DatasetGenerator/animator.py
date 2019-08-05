@@ -17,7 +17,7 @@ x_dim_output = 512  # Width of the image
 y_dim_output = 256  # Height of the image
 circle_radius = 5   # Radius of the circle
 cycles = 20         # Cycles per animation, gets modified when multiple animations are needed
-original_dir = '/hdd/Datasets/OpticalFlow/original_video/'  #Dir of the original stt of images, modified for multiple animations
+original_dir = 'drive/My Drive/PARMA/OpticalFlow/GitRepo/OriginalVideo/'  #Dir of the original stt of images, modified for multiple animations
 # Color coefficients, used for multiple animations
 red = 1
 green = 0

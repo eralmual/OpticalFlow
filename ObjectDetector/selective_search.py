@@ -4,14 +4,15 @@ import copy
 from cv2 import ximgproc
 import matplotlib.pyplot as plt
 
+from minimum_selection import minimum_selection
 from nms import non_max_suppression
 
  
 def selective_search(image_path, type):
  
     # speed-up using multithreads
-    cv2.setUseOptimized(True);
-    cv2.setNumThreads(8);
+    cv2.setUseOptimized(True)
+    cv2.setNumThreads(8)
  
     # read image
     im = cv2.imread(image_path)
@@ -41,6 +42,11 @@ def selective_search(image_path, type):
  
     # run selective search segmentation on input image
     rects = ss.process()
+    # Select the smaller boxes
+    #rects = minimum_selection(rects, 10)
+    # Transform  data from [x y w h] -> [x1 y1 x2 y2]
+    rects[:, 2:] += rects[:, 0:2]
+    #rects = non_max_suppression(rects, 0.9)
     print('Total Number of Region Proposals: {}'.format(len(rects)))
      
     # number of region proposals to show
@@ -49,12 +55,9 @@ def selective_search(image_path, type):
     # of reason proposals to be shown
     increment = 2
 
-    sup = copy.deepcopy(rects)
-    sup[:, 2:] += rects[:, 0:2]
-    #sup = non_max_suppression(sup, 0.1)
-
+    print("#################### SELECTED ####################")
     print(rects)
-    print(sup)
+
 
     #out_folder = '/home/gerardo/Documents/Parma/Tracking/Object Detector/Results/40/'
 
@@ -65,15 +68,14 @@ def selective_search(image_path, type):
     for i, rect in enumerate(rects):
         # draw rectangle for region proposal till numShowRects
         if (i < numShowRects):
-            x, y, w, h = rect
-            cv2.rectangle(imOut, (x, y), (x+w, y+h), (0, 255, 0), 1, cv2.LINE_AA)
-            crop_img = im[y:(y+h), x:(x+w)]
+            x1, y1, x2, y2 = rect
+            cv2.rectangle(imOut, (x1, y1), (x2, y2), (0, 255, 0), 1, cv2.LINE_AA)
+            crop_img = im[y1:y2, x1:x2]
             #cv2.imwrite(out_folder + str(i) + ".png", crop_img)
         else:
             break
 
     # show output
-    #cv2.imshow("Output", imOut)
     plt.imshow(imOut)
     plt.grid(True)
     plt.show()
@@ -94,4 +96,4 @@ def selective_search(image_path, type):
     
 
 if __name__ == '__main__':
-    selective_search("/hdd/Datasets/OpticalFlow/s10_e3_tsen/025.png", 'f')
+    selective_search("/hdd/Datasets/OpticalFlow/s10_e3_tsen/gt/025.png", 'f')
