@@ -13,11 +13,11 @@ from CircleAnimation import CircleAnimation
 
 # Parameters
 max_samples = 5000  # Sets the maximum amount of frames
-x_dim_output = 512  # Width of the image
+x_dim_output = 256  # Width of the image
 y_dim_output = 256  # Height of the image
 circle_radius = 5   # Radius of the circle
 cycles = 20         # Cycles per animation, gets modified when multiple animations are needed
-original_dir = 'drive/My Drive/PARMA/OpticalFlow/GitRepo/OriginalVideo/'  #Dir of the original stt of images, modified for multiple animations
+original_dir = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/OriginalVideo/'  #Dir of the original stt of images, modified for multiple animations
 # Color coefficients, used for multiple animations
 red = 1
 green = 0
@@ -111,23 +111,7 @@ def bgnd_animation(frames, animation):
 
 
 if __name__ == "__main__":
-
-    # Parameters
-    max_samples = 5000  # Sets the maximum amount of frames
-    x_dim_output = 512  # Width of the image
-    y_dim_output = 256  # Height of the image
-    circle_radius = 5   # Radius of the circle
-    cycles = 20         # Cycles per animation, gets modified when multiple animations are needed
-    original_dir = '/hdd/Datasets/OpticalFlow/original_video/'  #Dir of the original stt of images, modified for multiple animations
-    # Color coefficients, used for multiple animations
-    red = 1
-    green = 0
-    blue = 0
-    #Used to separate colors in a big animation
-    acc_red = 0
-    acc_green = 0
-    acc_blue = 0
-
+    
     step = 0
     std = 0
     trajectory = ''

@@ -1,4 +1,3 @@
-#
 import os
 
 #Import necessary packages, torch, numpy, pylab
@@ -15,6 +14,12 @@ import numpy as np
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
+
+workDirectory = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/gt_tracking/'
+saveDirectory = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/ElmanNetwork/Weigths and results/'
+senDs = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/gt_tracking/Positions_sen.csv'
+dfDs = '/home/gerardo/Documents/Parma/Datasets/DF/Positions_df.csv'
+
 
 class SequenceSinDataset(Dataset):
 
@@ -86,8 +91,8 @@ class SequenceDataset(Dataset):
                 """
 
                 dataFrame = pandas.read_csv(dataset_name)
-                
-                Y = dataFrame.values
+
+                Y = dataFrame.values[:,1:]
                 Yt = Y.transpose()
 
                 #create the input time series for the model, with one unit of delay, is no model parameter, no grad needed
@@ -124,6 +129,42 @@ class SequenceDataset(Dataset):
                 @return size
                 """
                 return self.yInput.shape[1]
+
+def get_dataloaders(dataset, device, test_percent=0.2, batch_size=1, std=0.1):
+
+        # Validate a correct percentage
+        test_percent = test_percent/100 if test_percent > 1 else test_percent
+
+        if dataset:
+                # Generates the dataset and then creates a loader from it
+                dset = SequenceDataset(dataset, device)
+        else:
+                dset = SequenceSinDataset(std, 3000, device)
+
+        # Calculate separation index for training and validation
+        num_train = len(dset)
+        indices = list(range(num_train))
+        split = int(np.floor(test_percent * num_train))
+        np.random.shuffle(indices)
+        train_idx, valid_idx = indices[split:], indices[:split]
+
+        # Generates training and validation loaders
+        train_loader = DataLoader(dset, batch_size=batch_size, sampler=SubsetRandomSampler(train_idx))
+        val_loader = DataLoader(dset, batch_size=batch_size, sampler=SubsetRandomSampler(valid_idx))
+
+        return (train_loader, val_loader)
+
+""" 
+    Save the state of a net.
+"""
+def save_checkpoint(state, path='checkpoint/', filename='weights.pth'):
+    # If folder does not exists make folder
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    filepath = os.path.join(path, filename)
+    torch.save(state, filepath)
+
 
 class ElmanNet(nn.Module):
 
@@ -182,41 +223,6 @@ class ElmanNet(nn.Module):
 
                 return  (output, contextState)
 
-def get_dataloaders(dataset, device, test_percent=0.2, batch_size=1, std=0.1):
-
-        # Validate a correct percentage
-        test_percent = test_percent/100 if test_percent > 1 else test_percent
-
-        if dataset:
-                # Generates the dataset and then creates a loader from it
-                dset = SequenceDataset(dataset, device)
-        else:
-                dset = SequenceSinDataset(std, 3000, device)
-
-        # Calculate separation index for training and validation
-        num_train = len(dset)
-        indices = list(range(num_train))
-        split = int(np.floor(test_percent * num_train))
-        np.random.shuffle(indices)
-        train_idx, valid_idx = indices[split:], indices[:split]
-
-        # Generates training and validation loaders
-        train_loader = DataLoader(dset, batch_size=batch_size, sampler=SubsetRandomSampler(train_idx))
-        val_loader = DataLoader(dset, batch_size=batch_size, sampler=SubsetRandomSampler(valid_idx))
-
-        return (train_loader, val_loader)
-
-""" 
-    Save the state of a net.
-"""
-def save_checkpoint(state, path='checkpoint/', filename='weights.pth'):
-    # If folder does not exists make folder
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    filepath = os.path.join(path, filename)
-    torch.save(state, filepath)
-
 
 """
 Trains the model with an squared error loss function
@@ -257,6 +263,7 @@ def trainModel(net, loader, contextState, optimizer, criterion):
                 contextState = contextState.mean(dim=0).clone().detach().requires_grad_(True)
 
         return totalLoss.item() / len(loader)
+
 
 """
 Validates the model with an squared error loss function
@@ -369,6 +376,7 @@ def setup_and_train(dataset, savefile, dir_results, epochs, lr, std, run, opt = 
     
         return (train_loss_epoch.mean(), val_loss_epoch.mean())
 
+
 def predict(load, dataset, std, contextConcatInputLayerSize = 8, hiddenLayerSize = 6, outputLayerSize = 2):
 
         # Use GPU or not
@@ -410,65 +418,60 @@ def predict(load, dataset, std, contextConcatInputLayerSize = 8, hiddenLayerSize
         plt.scatter(predictions.detach().numpy()[0,:], predictions.detach().numpy()[1,:])
         plt.show()
 
-"""
-Main function
-"""
-def main(runs):
+def startTraining(workDir, saveDir):
+        runs = 1
+        sen = torch.zeros(runs)
+        df = torch.zeros(runs)
 
-    sen = torch.zeros(runs)
-    df = torch.zeros(runs)
-    
-    for i in range(runs):
-    
+        for i in range(runs):
+
         print("\nEntrenamiento para la trayectoria sen\n")
-        
+
         (avg_train_loss_sen, avg_val_loss_sen) = setup_and_train(
-                dataset= '/home/gerardo/Documents/Parma/Datasets/Sen/Positions_sen.csv',
-                dir_results="/home/gerardo/Documents/TEC/IA/TP_4/Results/run1.csv",
-                savefile="/home/gerardo/Documents/TEC/IA/TP_4/Checkpoints/Sen/",
+                dataset = workDirectory + 'Positions_sen.csv',
+                dir_results = workDirectory + 'sen.csv',
+                savefile = saveDir,
                 loss="MSE",
                 epochs=100,
                 lr=0.1,
                 std=0.1,
                 run=i,
                 batch_size=10)
-        
+        '''
         print("\nEntrenamiento para la trayectoria df\n")
-        
+
         (avg_train_loss_df, avg_val_loss_df) = setup_and_train(
-                dataset='/home/gerardo/Documents/Parma/Datasets/DF/Positions_df.csv',
-                dir_results="/home/gerardo/Documents/TEC/IA/TP_4/Results/run2.csv",
-                savefile="/home/gerardo/Documents/TEC/IA/TP_4/Checkpoints/DF/",
+                dataset = workDirectory + 'Positions_df.csv',
+                dir_results = workDirectory + 'run2.csv",
+                savefile = saveDir,
                 loss="MSE",
                 epochs=100,
                 lr=0.1,
                 std=0.01,
                 run=i,
                 batch_size=10)
-
+        '''
         sen[i] = avg_val_loss_sen
-        df[i] = avg_val_loss_df
-        
+        df[i] = 0#avg_val_loss_df
+
         print("""\nPara el run {} se obtuvieron los valores:
                 Sen: Mean = {},
-                DF: Mean = {}\n""".format(i, avg_val_loss_sen.item(), avg_val_loss_df.item()))
+                DF: Mean = {}\n""".format(i, avg_val_loss_sen.item(), 0))
 
-    predict(load="/home/gerardo/Documents/TEC/IA/TP_4/Checkpoints/Sen/weights0.pth",
-                dataset='/home/gerardo/Documents/Parma/Datasets/Sen/Positions_sen.csv',
+        predict(load = saveDir + 'senWeights0.pth',
+                dataset = senDataset,
                 std=0.1)
-
-    predict(load="/home/gerardo/Documents/TEC/IA/TP_4/Checkpoints/DF/weights0.pth",
-                dataset='/home/gerardo/Documents/Parma/Datasets/DF/Positions_df.csv',
+        '''
+        predict(load = saveDir + 'senWeights0.pth',
+                dataset = dfDs,
                 std=0.01)
-    
-    avg_sen = sen.mean()
-    std_sen = sen.std()
+        '''
+        avg_sen = sen.mean()
+        std_sen = sen.std()
 
-    avg_df = df.mean()
-    std_df = df.std()
-    
-    print("""Valores en total para los 5 runs:
-            Sen: Mean = {}, STD = {},
-            DF: Mean = {}, STD = {}""".format(avg_sen.item(), std_sen.item(), avg_df.item(), std_df.item()))
+        avg_df = 0 #df.mean()
+        std_df = 0 #df.std()
 
-main(1);
+        print("""Valores en total para los 5 runs:
+                Sen: Mean = {}, STD = {}""".format(avg_sen.item(), std_sen.item()))
+
