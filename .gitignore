@@ -4,3 +4,7 @@ DatasetGenerator/__pycache__/
 ObjectDetector/__pycache__/
 
 Dataset/
+
+\.vscode/settings\.json
+
+\.vscode/launch\.json
