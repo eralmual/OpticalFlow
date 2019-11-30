@@ -16,15 +16,8 @@ max_samples = 5000  # Sets the maximum amount of frames
 x_dim_output = 256  # Width of the image
 y_dim_output = 256  # Height of the image
 circle_radius = 5   # Radius of the circle
-
-# We asume this script will be executed from GitRepo
-# so the directory with the original video will be inside 
-# Dataset/OriginalVideo/
-original_dir = os.getcwd()[:-16] + 'Dataset/OriginalVideo/'
-
-
-
-
+cycles = 20         # Cycles per animation, gets modified when multiple animations are needed
+original_dir = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/OriginalVideo/'  #Dir of the original stt of images, modified for multiple animations
 # Color coefficients, used for multiple animations
 colors = ['b', 'g', 'r', 'c', 'm', 'y','w', 'k']
 colors_val = [(255,0,0), (0, 255, 0), (0, 0, 255), (255,255,0), (255, 0, 255), (0, 255, 255), (255, 255, 255), (0,0,0) ]
@@ -141,21 +134,12 @@ if __name__ == "__main__":
     print("Using a standar deviation of: " + str(std))
     print("Drawing a " + trajectory + " trajectory")
     print("Using " + save_dir + " as save directory")
-    print('Looking for bg in' + original_dir)
-    # python3 animator.py -s 3 -e 2 -t sen -d /home/erick/googleDrive/PARMA/OpticalFlow/GitRepo/Dataset/test/ -n 5
-    t = trajectory
-    for i in range(0, num_circles):
-        print('------------------------------------------------------- Adding circle #' + str(i) +' -------------------------------------------------------')
-        if(trajectory == 'shuffle'):
-            if(t == 'shuffle' or t == 'sen'):
-                t = 'df'
-            else:
-                t = 'sen'
-        
-        single_animation(   max_samples // step,
-                            std,
-                            t,
-                            save_dir,
-                            original_dir)
-        
+    
+   
+   # TODO: EXPECT MULTIPLE TAJECTORIES SEPARATED BY +
+    single_animation(  max_samples // step,
+                        std,
+                        trajectory,
+                        save_dir)
+
 
