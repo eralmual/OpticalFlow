@@ -93,12 +93,10 @@ class CircleAnimation():
 
     def generate_trajectory(self):
         a = int(time.time()) % 50
-        print(a)
         # Define base movement in x, start, finish and amount of values
         x = np.linspace(a, self.width, self.frames)
         # Create gaussian noise with u=0 and std=noise and add it to x
         x += np.random.uniform(-self.noise_std, self.noise_std, x.shape)
-        print(x[0])
         
         # Define how many cicles will be done 1 cycle = 2pi
         cita = np.linspace(0, self.cycles * np.pi, self.frames)

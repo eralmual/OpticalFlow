@@ -649,47 +649,6 @@ def setup_and_run_train(n_channels, n_classes, dir_img, dir_gt, dir_results, loa
     
     return train_loss, val_loss
 
-"""# Running the Training
-
-Now, we will run the training. You can change this hyperparameters to see how affects the results.
-
-**Only one run**
-
-## Back Model
-"""
-
-setup_and_run_train(n_channels = 3, 
-                    n_classes = 1, 
-                    dir_img = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/sen/', 
-                    dir_gt = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/gt/', 
-                    dir_results = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/ObjectSegmentation/weights/', 
-                    #load = 'checkpoints/DT/weights1.pth', 
-                    load = False,
-                    val_perc = 20, 
-                    batch_size = 10, 
-                    epochs = 10, 
-                    lr = 0.001, 
-                    run = str(1), 
-                    optimizer = "Adam", 
-                    loss = "MSE", 
-                    loaders = False)
-
-"""## Top Model"""
-
-setup_and_run_train(n_channels = 3, 
-                    n_classes = 1, 
-                    dir_img = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/sen/',
-                    dir_gt = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/gt/', 
-                    dir_results = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/ObjectSegmentation/weights/', 
-                    load = False, 
-                    val_perc = 20, 
-                    batch_size = 10, 
-                    epochs = 25,
-                    lr = 0.001, 
-                    run = str(1), 
-                    optimizer = "Adam", 
-                    loss = "CE", 
-                    loaders = False)
 
 """# Image from tensor"""
 
@@ -756,47 +715,6 @@ def save_dataset(dir_save, load, n_classes, dir_img, conversion, out):
             img_new.save(dir_save + id_n[0])
 
 
-"""# Create Dataset for Back Model predictions
-
-# Save Train Dataset
-"""
-
-save_dataset(dir_save='predictions/DT/K-Folds/run_4/', 
-             load='checkpoints/DT/K-Folds/weights4.pth', 
-             n_classes=1, 
-             dir_img='data/Original/',
-             conversion='L',
-             out = None)
-
-"""# Save Test Dataset"""
-
-save_dataset(dir_save='predictions/DT/MAE_BDE_N/Test/', 
-             load='checkpoints/DT/weights1.pth', 
-             n_classes=1, 
-             dir_img='data/Original/Test/',
-             conversion='L',
-             out = None)
-
-"""# Create Dataset for Top Model predictions
-
-# Save Train Dataset
-"""
-
-save_dataset(dir_save='predictions/Border/Prueba/run_0/', 
-             load='checkpoints/Border/K-Folds/weights0.pth', 
-             n_classes=3, 
-             dir_img='data/Original/',
-             conversion='RGB',
-             out=None)
-
-"""# Save Test Dataset"""
-
-save_dataset(dir_save='predictions/Border_Idea/Test/', 
-             load='checkpoints/Border_Idea/weights1.pth', 
-             n_classes=3, 
-             dir_img='predictions/DT/MAE_BDE_N/Test/',
-             conversion='RGB',
-             out=None)
 
 """# Seeing the results
 
@@ -929,10 +847,103 @@ def predict(load="checkpoints/Border/weights1.pth", n_channels=1, n_classes=1, d
 
 """# Test predictions for back model"""
 
-predict(load= '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/ObjectSegmentation/weights/weights1.pth',
-        n_channels = 3,
-        n_classes = 1,
-        dir_pred = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/sen/',
-        dir_gt = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/gt/',
-        evaluation="MSE", 
-        out=None)
+
+# Recieves dataset, gt and store directories
+def startTraining(t_ds, t_gt, v_ds, v_gt, st):
+
+    """# Running the Training
+
+    Now, we will run the training. You can change this hyperparameters to see how affects the results.
+
+    **Only one run**
+
+    ## Back Model
+    """
+
+    setup_and_run_train(n_channels = 3, 
+                        n_classes = 1, 
+                        dir_img = t_ds, 
+                        dir_gt = t_gt, 
+                        dir_results = st, 
+                        #load = 'checkpoints/DT/weights1.pth', 
+                        load = False,
+                        val_perc = 20, 
+                        batch_size = 10, 
+                        epochs = 10, 
+                        lr = 0.001, 
+                        run = str(1), 
+                        optimizer = "Adam", 
+                        loss = "MSE", 
+                        loaders = False)
+
+    """## Top Model"""
+
+    setup_and_run_train(n_channels = 3, 
+                        n_classes = 1, 
+                        dir_img = t_ds,
+                        dir_gt = t_gt, 
+                        dir_results = st, 
+                        load = False, 
+                        val_perc = 20, 
+                        batch_size = 10, 
+                        epochs = 25,
+                        lr = 0.001, 
+                        run = str(1), 
+                        optimizer = "Adam", 
+                        loss = "CE", 
+                        loaders = False)
+
+    predict(load= st + 'weights1.pth',
+            n_channels = 3,
+            n_classes = 1,
+            dir_pred = v_ds,
+            dir_gt = v_gt,
+            evaluation="MSE", 
+            out=None)
+
+
+
+if __name__ == "__main__":
+    
+    t_ds = ''
+    v_ds = ''
+    t_gt = ''
+    v_gt = ''
+    st = ''
+    a = ''
+
+
+    try:
+            # We want to recognize s,n,t,c as options with argument thats why 
+            # the : follows them, h doesnt need arguments so its alone
+            opts, args = getopt.getopt(sys.argv[1:],"ht:v:g:j:s:a:",["training=", "val=", "gtt=", "gtv=", "store=", "action="])
+    except getopt.GetoptError:
+            print('unet3_reduced.py -t <training dataset directory> -v <validation dataset directory> -g <train gt dataset directory> -j <val gt dataset directory> -s <store directory> -a <train of predict>')
+            sys.exit(2)
+    for opt, arg in opts:
+            if opt == '-h':
+                    print('unet3_reduced.py -t <training dataset directory> -v <validation dataset directory> -g <train gt dataset directory> -j <val gt dataset directory> -s <store directory> -a <train of predict>')
+                    sys.exit()
+
+            elif opt in ("-s", "--st"):
+                    st = arg
+                    if(arg[-1] != '/'):
+                            st += '/'
+
+            elif opt in ("-d", "--ds"):
+                    ds = arg
+                    if(arg[-1] != '/'):
+                            st += '/'
+            
+            elif opt in ("-a", "--action"):
+                    a = arg
+                    
+    print("Looking for data in " + ds)
+    print("Looking for weights in " + st)
+
+    if(a == 'training'):
+            startTraining(ds, st)
+    elif(a == 'predict'):
+            predict(load = st + 'Weights.pth',
+                    dataset = ds,
+                    std=0.1)

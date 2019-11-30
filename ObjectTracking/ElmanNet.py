@@ -1,4 +1,4 @@
-import os
+import os, getopt, math
 
 #Import necessary packages, torch, numpy, pylab
 import torch
@@ -14,11 +14,6 @@ import numpy as np
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
-
-workDirectory = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/gt_tracking/'
-saveDirectory = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/ElmanNetwork/Weigths and results/'
-senDs = '/content/drive/My Drive/PARMA/OpticalFlow/GitRepo/Dataset/gt_tracking/Positions_sen.csv'
-dfDs = '/home/gerardo/Documents/Parma/Datasets/DF/Positions_df.csv'
 
 
 class SequenceSinDataset(Dataset):
@@ -306,9 +301,9 @@ def setup_and_train(dataset, savefile, dir_results, epochs, lr, std, run, opt = 
                         batch_size = 1):
   
         # Use GPU or not
-        #use_cuda = torch.cuda.is_available()
-        #device = torch.device("cuda" if use_cuda else "cpu")
-        device = "cpu"
+        use_cuda = torch.cuda.is_available()
+        device = torch.device("cuda" if use_cuda else "cpu")
+        #device = "cpu"
 
         # Instantiates the network
         net = ElmanNet(contextConcatInputLayerSize, hiddenLayerSize, outputLayerSize, device)
@@ -398,7 +393,7 @@ def predict(load, dataset, std, contextConcatInputLayerSize = 8, hiddenLayerSize
         #init the array of context state units
         contextState = torch.zeros((1, hiddenLayerSize), dtype=torch.float, requires_grad=True).to(device)
 
-        predictions = torch.zeros((2, len(val_loader)))
+        predictSions = torch.zeros((2, len(val_loader)))
         targets = torch.zeros((2, len(val_loader)))
 
         for idx, (x, target) in enumerate(val_loader):
@@ -419,59 +414,79 @@ def predict(load, dataset, std, contextConcatInputLayerSize = 8, hiddenLayerSize
         plt.show()
 
 def startTraining(workDir, saveDir):
-        runs = 1
-        sen = torch.zeros(runs)
-        df = torch.zeros(runs)
+        
+        # Select csv to train
+        files = os.listdir(workDir)
+        csvs = [ filename for filename in files if filename.endswith( '.csv' ) ]
 
-        for i in range(runs):
+        # Create the validation ds
+        lencsvs = len(csvs)
+        len_val = math.floor(lencsvs * 0.3)
+        val_ds = csvs[-len_val:]
+        csvs = csvs[:-len_val]
+        lencsvs = len(csvs)
 
-        print("\nEntrenamiento para la trayectoria sen\n")
+        train_loss = torch.zeros(lencsvs)
+        val_loss = torch.zeros(lencsvs)
 
-        (avg_train_loss_sen, avg_val_loss_sen) = setup_and_train(
-                dataset = workDirectory + 'Positions_sen.csv',
-                dir_results = workDirectory + 'sen.csv',
-                savefile = saveDir,
-                loss="MSE",
-                epochs=100,
-                lr=0.1,
-                std=0.1,
-                run=i,
-                batch_size=10)
-        '''
-        print("\nEntrenamiento para la trayectoria df\n")
+        i = 0
+        for sample in csvs:
 
-        (avg_train_loss_df, avg_val_loss_df) = setup_and_train(
-                dataset = workDirectory + 'Positions_df.csv',
-                dir_results = workDirectory + 'run2.csv",
-                savefile = saveDir,
-                loss="MSE",
-                epochs=100,
-                lr=0.1,
-                std=0.01,
-                run=i,
-                batch_size=10)
-        '''
-        sen[i] = avg_val_loss_sen
-        df[i] = 0#avg_val_loss_df
+                print("\nEntrenamiento para la trayectoria " + sample )
 
-        print("""\nPara el run {} se obtuvieron los valores:
-                Sen: Mean = {},
-                DF: Mean = {}\n""".format(i, avg_val_loss_sen.item(), 0))
+                (avg_train_loss, avg_val_loss) = setup_and_train(
+                        dataset = workDir + sample,
+                        dir_results = saveDir + 'resultsFor_'+ sample,
+                        savefile = saveDir,
+                        loss="MSE",
+                        epochs=100,
+                        lr=0.1,
+                        std=0.1,
+                        run=i,
+                        batch_size=10)
+                
+                val_loss[i] += avg_val_loss
+                train_loss[i] += avg_train_loss
+                i += 1
 
-        predict(load = saveDir + 'senWeights0.pth',
-                dataset = senDataset,
-                std=0.1)
-        '''
-        predict(load = saveDir + 'senWeights0.pth',
-                dataset = dfDs,
-                std=0.01)
-        '''
-        avg_sen = sen.mean()
-        std_sen = sen.std()
+                print("\nSample: {}\tValidation loss: {}\tTrainig loss: {}".format(sample, val_loss[i]/lencsvs, train_loss[i]/lencsvs))
 
-        avg_df = 0 #df.mean()
-        std_df = 0 #df.std()
+        # Validate 
+        for sample in val_ds:
+                predict(load = saveDir + 'Weights' + str(lencsvs) + '.pth',
+                        dataset = workDir + sample,
+                        std=0.1)
 
-        print("""Valores en total para los 5 runs:
-                Sen: Mean = {}, STD = {}""".format(avg_sen.item(), std_sen.item()))
 
+if __name__ == "__main__":
+    
+        ds = ''
+        st = ''
+
+
+        try:
+                # We want to recognize s,n,t,c as options with argument thats why 
+                # the : follows them, h doesnt need arguments so its alone
+                opts, args = getopt.getopt(sys.argv[1:],"hd:s:",["ds=","st="])
+        except getopt.GetoptError:
+                print('ElmanNet.py -d <dataset directory> -s <store directory>')
+                sys.exit(2)
+        for opt, arg in opts:
+                if opt == '-h':
+                        print('ElmanNet.py -d <dataset directory> -s <store directory>')
+                        sys.exit()
+
+                elif opt in ("-s", "--st"):
+                        st = arg
+                        if(arg[-1] != '/'):
+                                st += '/'
+
+                elif opt in ("-d", "--ds"):
+                        ds = arg
+                        if(arg[-1] != '/'):
+                                st += '/'
+
+        print("Looking for data in " + ds)
+        print("Looking for weights in " + st)
+
+        startTraining(ds, st)
